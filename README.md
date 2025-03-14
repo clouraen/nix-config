@@ -1,105 +1,104 @@
 # NixOS Configuration
 
-Sistema NixOS personalizado com suporte para múltiplos hosts e instalação automatizada.
+Customized NixOS system with support for multiple hosts and automated installation.
 
-## Hosts Suportados
+## Supported Hosts
 
 - Desktop (i7 3370 + GTX 4060)
 - ThinkPad T440p
 - MacBook M1
 
-## Instalação Oneliner
+## One-line Installation
 
-Execute este comando diretamente no instalador NixOS:
+Run this command directly in the NixOS installer to start the interactive installation:
 
 ```bash
-# Para Desktop:
-curl -sL https://raw.githubusercontent.com/clouraen/nix-config/main/bootstrap.sh | bash -s -- -d /dev/sda -h desktop
+# Interactive installation with assistant:
+curl -sL https://raw.githubusercontent.com/clouraen/nix-config/main/bootstrap.sh | bash
 
-# Para ThinkPad T440p:
-curl -sL https://raw.githubusercontent.com/clouraen/nix-config/main/bootstrap.sh | bash -s -- -d /dev/nvme0n1 -h thinkpad-t440p
-
-# Opções adicionais (tamanho do swap):
-curl -sL https://raw.githubusercontent.com/clouraen/nix-config/main/bootstrap.sh | bash -s -- -d /dev/sda -h desktop -s 16G
+# The script will:
+# 1. List available devices for you to choose
+# 2. Present host options (desktop, thinkpad-t440p, macbook-m1)
+# 3. Allow you to set the swap size
+# 4. Confirm your choices before proceeding
 ```
 
-## Instalação Manual
+## Manual Installation
 
-1. Baixe o instalador NixOS
-2. Boot no instalador
-3. Clone este repositório:
+1. Download the NixOS installer
+2. Boot into the installer
+3. Clone this repository:
 ```bash
 git clone https://github.com/clouraen/nix-config.git
 cd nix-config
 ```
 
-4. Execute o script de instalação:
+4. Run the installation script:
 ```bash
-# Para Desktop:
+# For Desktop:
 nix run .#install -- -d /dev/sda -h desktop -s 16G
 
-# Para ThinkPad T440p:
+# For ThinkPad T440p:
 nix run .#install -- -d /dev/nvme0n1 -h thinkpad-t440p -s 8G
 
-# Para MacBook M1 (requer particionamento manual):
-# Primeiro faça o particionamento manual e depois:
+# For MacBook M1 (requires manual partitioning):
+# First do the manual partitioning and then:
 nix run .#install -- -d /dev/nvme0n1 -h macbook-m1 -s 8G
 ```
 
-## Configurações
+## Configurations
 
-### Usuário Padrão
+### Default User
 - Username: huggyturd
-- Senha inicial: nixos]
-- Sudo sem senha habilitado
+- Initial password: nixos
+- Passwordless sudo enabled
 
 ### Desktop Environment
 - Hyprland (Wayland)
-- Configuração baseada em end-4/dots-hyprland
+- Configuration based on end-4/dots-hyprland
 
-### Pacotes Comuns
+### Common Packages
 - Google Chrome
 - Vim
 - Git
 - Terminal: kitty
-- Barra: waybar
-- Notificações: dunst
+- Bar: waybar
+- Notifications: dunst
 - Menu: wofi/rofi
 
-### Específico por Host
+### Host-Specific
 
 #### Desktop
-- Drivers NVIDIA otimizados
-- Suporte OpenGL/Vulkan
-- Performance CPU Intel
+- Optimized NVIDIA drivers
+- OpenGL/Vulkan support
+- Intel CPU performance
 
 #### ThinkPad T440p
-- TLP para gerenciamento de bateria
+- TLP for battery management
 - ThinkFan
-- Trackpoint configurado
+- Configured trackpoint
 
 #### MacBook M1
-- Asahi Linux otimizado
-- Firmware específico
-- Gerenciamento de energia
+- Optimized Asahi Linux
+- Specific firmware
+- Power management
 
-## Manutenção
+## Maintenance
 
-Para atualizar o sistema:
+To update the system:
 ```bash
 sudo nixos-rebuild switch
 ```
 
-Para atualizar com alterações no flake:
+To update with changes in the flake:
 ```bash
 sudo nixos-rebuild switch --flake .#hostname
 ```
 
-## Estrutura do Projeto
-```
+## Project Structure
+````
 .
-├── common/           # Configurações compartilhadas
-├── hosts/           # Configurações específicas por host
-├── modules/         # Módulos customizados
-└── scripts/         # Scripts de instalação
-```
+├── common/           # Shared configurations
+├── hosts/           # Host-specific configurations
+├── modules/         # Custom modules
+└── scripts/         # Installation scripts
