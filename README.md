@@ -8,19 +8,28 @@ Sistema NixOS personalizado com suporte para múltiplos hosts e instalação aut
 - ThinkPad T440p
 - MacBook M1
 
-## Pré-requisitos
+## Instalação Oneliner
 
-- Mídia de instalação NixOS
-- Conexão com internet
-- Git
+Execute este comando diretamente no instalador NixOS:
 
-## Instalação
+```bash
+# Para Desktop:
+curl -sL https://raw.githubusercontent.com/clouraen/nix-config/main/bootstrap.sh | bash -s -- -d /dev/sda -h desktop
+
+# Para ThinkPad T440p:
+curl -sL https://raw.githubusercontent.com/clouraen/nix-config/main/bootstrap.sh | bash -s -- -d /dev/nvme0n1 -h thinkpad-t440p
+
+# Opções adicionais (tamanho do swap):
+curl -sL https://raw.githubusercontent.com/clouraen/nix-config/main/bootstrap.sh | bash -s -- -d /dev/sda -h desktop -s 16G
+```
+
+## Instalação Manual
 
 1. Baixe o instalador NixOS
 2. Boot no instalador
 3. Clone este repositório:
 ```bash
-git clone https://github.com/your-username/nix-config.git
+git clone https://github.com/clouraen/nix-config.git
 cd nix-config
 ```
 
