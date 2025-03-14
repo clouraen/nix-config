@@ -14,7 +14,7 @@ Run this command directly in the NixOS installer to start the interactive instal
 
 ```bash
 # Interactive installation with assistant:
-curl -sL https://raw.githubusercontent.com/clouraen/nix-config/main/bootstrap.sh | bash
+curl -sL https://raw.githubusercontent.com/clouraen/nix-config/refs/heads/master/bootstrap.sh | bash
 
 # The script will:
 # 1. List available devices for you to choose
