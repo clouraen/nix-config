@@ -7,9 +7,10 @@ SWAP_SIZE="8"
 USERNAME=""
 FULLNAME=""
 HOSTNAME=""
+PASSWORD=""
 
 # Parse arguments
-while getopts "d:h:s:u:f:n:" opt; do
+while getopts "d:h:s:u:f:n:p:" opt; do
   case $opt in
     d) DISK="$OPTARG" ;;
     h) HOST="$OPTARG" ;;
@@ -17,14 +18,15 @@ while getopts "d:h:s:u:f:n:" opt; do
     u) USERNAME="$OPTARG" ;;
     f) FULLNAME="$OPTARG" ;;
     n) HOSTNAME="$OPTARG" ;;
-    *) echo "Usage: $0 -d <disk> -h <host> [-s <swap-size>] -u <username> -f \"<fullname>\" -n <hostname>" && exit 1 ;;
+    p) PASSWORD="$OPTARG" ;;
+    *) echo "Usage: $0 -d <disk> -h <host> [-s <swap-size>] -u <username> -f \"<fullname>\" -n <hostname> [-p <password>]" && exit 1 ;;
   esac
 done
 
 # Validate required parameters
 if [ -z "$DISK" ] || [ -z "$HOST" ] || [ -z "$USERNAME" ] || [ -z "$FULLNAME" ] || [ -z "$HOSTNAME" ]; then
   echo "Missing required parameters. Usage:"
-  echo "$0 -d <disk> -h <host> [-s <swap-size>] -u <username> -f \"<fullname>\" -n <hostname>"
+  echo "$0 -d <disk> -h <host> [-s <swap-size>] -u <username> -f \"<fullname>\" -n <hostname> [-p <password>]"
   exit 1
 fi
 
@@ -75,6 +77,13 @@ mkdir -p /mnt/boot/efi
 mount "$EFI_PART" /mnt/boot/efi
 
 echo "=== Generating NixOS Configuration ==="
+# Hash the password if provided
+if [ -n "$PASSWORD" ]; then
+  HASHED_PASSWORD=$(nix-shell -p mkpasswd --run "mkpasswd -m sha-512 '$PASSWORD'")
+else
+  HASHED_PASSWORD='!'  # Locked password
+fi
+
 # Generate hardware configuration
 nixos-generate-config --root /mnt
 
@@ -101,7 +110,7 @@ cat > "/mnt/etc/nixos/hosts/$HOSTNAME/default.nix" <<EOF
     isNormalUser = true;
     description = "$FULLNAME";
     extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
-    initialPassword = "changeme";
+    hashedPassword = "${HASHED_PASSWORD}";
   };
 }
 EOF
