@@ -1,0 +1,14 @@
+# This example uses age keys for encryption
+keys:
+  # User keys - replace with your key
+  - &user_key age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # Add system keys if needed
+  - &system_key age1yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+
+creation_rules:
+  # Path match pattern
+  - path_regex: secrets/secrets\.yaml$
+    key_groups:
+    - age:
+      - *user_key
+      - *system_key
