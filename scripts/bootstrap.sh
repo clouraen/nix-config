@@ -6,6 +6,8 @@ echo "This script will guide you through the NixOS installation process."
 
 # Configuration directory
 CONFIG_DIR="/home/cleiton-moura/Downloads/nix-config"
+# Hosts directory
+HOSTS_DIR="$CONFIG_DIR/hosts"
 
 # Default values
 DISK=""
@@ -80,7 +82,7 @@ select_disk() {
 select_host() {
     if [ -n "$SELECTED_HOST" ]; then
         echo "Selected host: $SELECTED_HOST"
-        echo "$SELECTED_HOST" > "$(dirname "$0")/../hostname"
+        echo "$SELECTED_HOST" > "$CONFIG_DIR/hostname" && ln -sf "$CONFIG_DIR/hostname" ./hostname
         echo "Host configuration set to $SELECTED_HOST"
         return
     fi
@@ -90,7 +92,6 @@ select_host() {
     echo ""
 
     # Find available host configurations
-    HOSTS_DIR="$(dirname "$0")/../hosts"
     mapfile -t HOSTS < <(find "$HOSTS_DIR" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | sort)
 
     if [ ${#HOSTS[@]} -eq 0 ]; then
@@ -121,7 +122,7 @@ select_host() {
     echo "Selected host: $SELECTED_HOST"
     
     # Create hostname file
-    echo "$SELECTED_HOST" > "$(dirname "$0")/../hostname"
+    echo "$SELECTED_HOST" > "$CONFIG_DIR/hostname" && ln -sf "$CONFIG_DIR/hostname" ./hostname
     echo "Host configuration set to $SELECTED_HOST"
 }
 
