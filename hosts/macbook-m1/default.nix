@@ -23,5 +23,23 @@
   # Keyboard and trackpad settings
   services.xserver.libinput.enable = true;
 
+  # Networking
+  networking.networkmanager.enable = true;
+  networking.wireless.enable = false; # Disable wpa_supplicant in favor of NetworkManager
+  
+  # SSH Configuration
+  services.openssh = {
+    enable = true;
+    settings = {
+      PasswordAuthentication = true;
+      PermitRootLogin = "no";
+    };
+  };
+
+  environment.systemPackages = with pkgs; [
+    networkmanagerapplet # NetworkManager GUI
+    gnome.nm-connection-editor
+  ];
+
   system.stateVersion = "23.11";
 }
