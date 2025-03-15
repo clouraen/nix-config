@@ -89,11 +89,11 @@ apply_config() {
     echo "Building and switching to configuration for $HOST_CONFIG..."
     
     # Configurar sops-nix se ainda não estiver configurado
-    if [ ! -f "/path/to/keys.txt" ]; then
+    if [ ! -f "$CONFIG_DIR/keys.txt" ]; then
         echo "Configurando chaves para sops-nix..."
-        mkdir -p $(dirname "/path/to/keys.txt")
-        nix-shell -p age --run "age-keygen -o /path/to/keys.txt"
-        chmod 600 /path/to/keys.txt
+        mkdir -p "$CONFIG_DIR"
+        nix-shell -p sops -p age --run "age-keygen -o $CONFIG_DIR/keys.txt"
+        chmod 600 "$CONFIG_DIR/keys.txt"
     fi
     
     # Aplicar a configuração usando o nome exato do host no flake.nix
