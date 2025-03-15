@@ -9,6 +9,43 @@ CONFIG_DIR="/home/cleiton-moura/Downloads/nix-config"
 # Hosts directory
 HOSTS_DIR="$CONFIG_DIR/hosts"
 
+# Function to select host configuration
+select_host() {
+    echo "=== Host Configuration ==="
+    
+    # Get list of host configurations
+    mapfile -t hosts < <(find "$HOSTS_DIR" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | sort)
+    
+    if [ ${#hosts[@]} -eq 0 ]; then
+        echo "Error: No host configurations found in $HOSTS_DIR"
+        exit 1
+    fi
+    
+    # Display menu
+    for i in "${!hosts[@]}"; do
+        echo "[$i] ${hosts[$i]}"
+    done
+    echo
+    
+    # Get user selection
+    local selection
+    while true; do
+        read -rp "Enter selection: " selection
+        if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -lt "${#hosts[@]}" ]; then
+            SELECTED_HOST="${hosts[$selection]}"
+            echo "Selected host: $SELECTED_HOST"
+            echo
+            echo "=== Host Selected ==="
+            echo "Host: $SELECTED_HOST"
+            echo
+            # Create hostname file
+            echo "$SELECTED_HOST" > "$CONFIG_DIR/hostname"
+            break
+        fi
+        echo "Invalid selection. Please try again."
+    done
+}
+
 # Default values
 DISK=""
 SELECTED_HOST=""
@@ -16,24 +53,24 @@ SWAP_SIZE="8G"
 USERNAME=""
 FULLNAME=""
 HOSTNAME=""
+PASSWORD=""
 INTERACTIVE=true
 
 # Parse command line arguments
 usage() {
-    echo "Usage: $0 [-d <disk>] [-h <host>] [-s <swap-size>] [-u <username>] [-f \"<fullname>\"] [-n <hostname>]"
+    echo "Usage: $0 [-d <disk>] [-s <swap-size>] [-u <username>] [-f \"<fullname>\"] [-n <hostname>] [-p <password>]"
     echo "  -d <disk>       Target disk for installation (e.g., /dev/sda)"
-    echo "  -h <host>       Host configuration to use"
     echo "  -s <swap-size>  Swap size (default: 8G)"
     echo "  -u <username>   Username for the new user"
     echo "  -f <fullname>   Full name for the new user"
     echo "  -n <hostname>   System hostname"
+    echo "  -p <password>   User password (optional)"
     exit 1
 }
 
-while getopts "d:h:s:u:f:n:" opt; do
+while getopts "d:s:u:f:n:p:" opt; do
     case ${opt} in
         d) DISK="$OPTARG"; INTERACTIVE=false ;;
-        h) SELECTED_HOST="$OPTARG"; INTERACTIVE=false ;;
         s) SWAP_SIZE="$OPTARG" ;;
         u) USERNAME="$OPTARG" ;;
         f) FULLNAME="$OPTARG" ;;
@@ -78,78 +115,52 @@ select_disk() {
     echo "Selected disk: $DISK"
 }
 
-# Host configuration selection function
-select_host() {
-    if [ -n "$SELECTED_HOST" ]; then
-        echo "Selected host: $SELECTED_HOST"
-        echo "$SELECTED_HOST" > "$CONFIG_DIR/hostname" && ln -sf "$CONFIG_DIR/hostname" ./hostname
-        echo "Host configuration set to $SELECTED_HOST"
-        return
-    fi
-    
-    echo ""
-    echo "=== Host Configuration Selection ==="
-    echo ""
-
-    # Find available host configurations
-    mapfile -t HOSTS < <(find "$HOSTS_DIR" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | sort)
-
-    if [ ${#HOSTS[@]} -eq 0 ]; then
-        echo "Error: No host configurations found in $HOSTS_DIR"
-        exit 1
-    fi
-
-    # Display menu
-    echo "Available host configurations:"
-    echo "-----------------------------"
-    for i in "${!HOSTS[@]}"; do
-        echo "[$((i+1))] ${HOSTS[$i]}"
-    done
-    echo "-----------------------------"
-
-    # Get user selection
-    local selection
-    while true; do
-        read -rp "Select host configuration [1-${#HOSTS[@]}]: " selection
-        if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -ge 1 ] && [ "$selection" -le "${#HOSTS[@]}" ]; then
-            SELECTED_HOST="${HOSTS[$((selection-1))]}"
-            break
-        else
-            echo "Invalid selection. Please try again."
-        fi
-    done
-
-    echo "Selected host: $SELECTED_HOST"
-    
-    # Create hostname file
-    echo "$SELECTED_HOST" > "$CONFIG_DIR/hostname" && ln -sf "$CONFIG_DIR/hostname" ./hostname
-    echo "Host configuration set to $SELECTED_HOST"
-}
 
 # Configure user settings
 configure_user() {
-    if [ -n "$USERNAME" ] && [ -n "$FULLNAME" ] && [ -n "$HOSTNAME" ]; then
-        echo "Username: $USERNAME"
-        echo "Full name: $FULLNAME"
-        echo "Hostname: $HOSTNAME"
-        return
+    if [ -z "$USERNAME" ] || [ -z "$FULLNAME" ] || [ -z "$HOSTNAME" ]; then
+        echo ""
+        echo "=== User Configuration ==="
+        echo ""
+        
+        if [ -z "$USERNAME" ]; then
+            read -rp "Enter username: " USERNAME
+        fi
+        
+        if [ -z "$FULLNAME" ]; then
+            read -rp "Enter full name: " FULLNAME
+        fi
+        
+        if [ -z "$HOSTNAME" ]; then
+            read -rp "Enter hostname: " HOSTNAME
+        fi
     fi
-    
+
+    if [ -z "$PASSWORD" ]; then
+        echo ""
+        echo "=== Password Configuration ==="
+        echo ""
+        while true; do
+            read -rsp "Enter password: " PASSWORD
+            echo
+            read -rsp "Confirm password: " password2
+            echo
+            if [ "$PASSWORD" = "$password2" ]; then
+                break
+            else
+                echo "Passwords do not match. Please try again."
+                echo
+            fi
+        done
+    fi
+
     echo ""
-    echo "=== User Configuration ==="
+    echo "=== User Settings ==="
+    echo "Username: $USERNAME"
+    echo "Full name: $FULLNAME"
+    echo "Hostname: $HOSTNAME"
+    echo "Password: [hidden]"
     echo ""
-    
-    if [ -z "$USERNAME" ]; then
-        read -rp "Enter username: " USERNAME
-    fi
-    
-    if [ -z "$FULLNAME" ]; then
-        read -rp "Enter full name: " FULLNAME
-    fi
-    
-    if [ -z "$HOSTNAME" ]; then
-        read -rp "Enter hostname: " HOSTNAME
-    fi
 }
 
 # Apply NixOS configuration
@@ -165,9 +176,17 @@ apply_config() {
         chmod 600 "$CONFIG_DIR/keys.txt"
     fi
     
+    # Hash the password if provided
+    local password_args=""
+    if [ -n "$PASSWORD" ]; then
+        HASHED_PASSWORD=$(nix-shell -p mkpasswd --run "mkpasswd -m sha-512 '$PASSWORD'")
+        password_args="--argstr hashedPassword '$HASHED_PASSWORD'"
+    fi
+    
     # Apply configuration using the exact host name in flake.nix
-    echo "Executing: nixos-rebuild switch --flake $CONFIG_DIR#$SELECTED_HOST"
-    nixos-rebuild switch --flake "$CONFIG_DIR#$SELECTED_HOST"
+    echo "Executing: nixos-rebuild switch --flake $CONFIG_DIR#$SELECTED_HOST $password_args"
+    # shellcheck disable=SC2086
+    nixos-rebuild switch --flake "$CONFIG_DIR#$SELECTED_HOST" $password_args
 }
 
 # Display installation summary
