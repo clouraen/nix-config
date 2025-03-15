@@ -129,15 +129,35 @@ cd "$TEMP_DIR"
 # If interactive mode, prompt for all parameters
 if [ "$INTERACTIVE" -eq 1 ]; then
   echo "=== Disk Selection ==="
-  # Get available disks
-  mapfile -t DISKS < <(lsblk -dpno NAME,SIZE | grep -v loop | awk '{print $1 " (" $2 ")"}')
-  if [ ${#DISKS[@]} -eq 0 ]; then
-    echo "No disks found. Exiting."
+  echo "Available disks:"
+
+  # Improved disk listing with filtering for actual physical disks
+  mapfile -t disks < <(lsblk -dpno NAME,SIZE,MODEL | grep -E '^/dev/(sd|nvme|vd)')
+
+  if [ ${#disks[@]} -eq 0 ]; then
+    echo "No disks found. Please ensure you have available disks and proper permissions."
     exit 1
   fi
 
-  echo "Available disks:"
-  DISK=$(select_option "${DISKS[@]}" | cut -d' ' -f1)
+  # Display disks with indices
+  for i in "${!disks[@]}"; do
+    echo "[$i] ${disks[$i]}"
+  done
+
+  # Get user selection
+  read -p "Enter selection: " selection
+
+  # Validate selection
+  if ! [[ "$selection" =~ ^[0-9]+$ ]] || [ "$selection" -ge "${#disks[@]}" ]; then
+    echo "Invalid selection. Exiting."
+    exit 1
+  fi
+
+  # Extract just the device path from the selected disk line
+  selected_disk=$(echo "${disks[$selection]}" | awk '{print $1}')
+  echo "Selected disk: $selected_disk"
+
+  DISK=$selected_disk
 
   echo "=== Host Configuration ==="
   echo "Select host configuration:"
