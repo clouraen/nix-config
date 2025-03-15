@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Function to display usage
 usage() {
-  echo "Usage: $0 [--interactive] | [-d disk -h host -u username -f fullname -n hostname [-s swap-size]]"
+  echo "Usage: $0 [--interactive] | [-d disk -h host -u username -f fullname -n hostname [-s swap-size] [-p password]]"
   echo
   echo "Options:"
   echo "  --interactive    Run in interactive mode with guided prompts"
@@ -13,10 +13,11 @@ usage() {
   echo "  -u, --username   Username for the system"
   echo "  -f, --fullname   Full name for the user (use quotes)"
   echo "  -n, --hostname   Hostname for the system"
+  echo "  -p, --password   User password (if not provided in interactive mode, will prompt)"
   echo
   echo "Examples:"
   echo "  $0 --interactive"
-  echo "  $0 -d /dev/sda -h desktop -u john -f \"John Doe\" -n nixos-desktop -s 16"
+  echo "  $0 -d /dev/sda -h desktop -u john -f \"John Doe\" -n nixos-desktop -s 16 -p secret"
   exit 1
 }
 
@@ -28,6 +29,7 @@ SWAP_SIZE="8"
 USERNAME=""
 FULLNAME=""
 HOSTNAME=""
+PASSWORD=""
 
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then
@@ -70,6 +72,11 @@ else
       -n|--hostname)
         if [ "$#" -lt 2 ]; then echo "Missing argument for $1"; usage; fi
         HOSTNAME="$2"
+        shift 2
+        ;;
+      -p|--password)
+        if [ "$#" -lt 2 ]; then echo "Missing argument for $1"; usage; fi
+        PASSWORD="$2"
         shift 2
         ;;
       --help)
@@ -170,6 +177,18 @@ if [ "$INTERACTIVE" -eq 1 ]; then
   echo "=== User Configuration ==="
   read -p "Enter username: " USERNAME
   read -p "Enter full name: " FULLNAME
+  
+  # Add password prompt with hidden input
+  read -s -p "Enter password: " PASSWORD
+  echo
+  read -s -p "Confirm password: " PASSWORD_CONFIRM
+  echo
+  
+  # Validate password match
+  if [ "$PASSWORD" != "$PASSWORD_CONFIRM" ]; then
+    echo "Passwords do not match. Exiting."
+    exit 1
+  fi
 
   echo "=== Hostname ==="
   read -p "Enter hostname: " HOSTNAME
@@ -181,6 +200,7 @@ echo "Host configuration: $HOST"
 echo "Swap size: ${SWAP_SIZE}GB"
 echo "Username: $USERNAME"
 echo "Full name: $FULLNAME"
+echo "Password: [HIDDEN]"
 echo "Hostname: $HOSTNAME"
 
 # If in interactive mode, ask for confirmation
@@ -199,7 +219,8 @@ nix --experimental-features "nix-command flakes" run .#install -- \
   -s "$SWAP_SIZE" \
   -u "$USERNAME" \
   -f "$FULLNAME" \
-  -n "$HOSTNAME"
+  -n "$HOSTNAME" \
+  -p "$PASSWORD"
 
 echo "=== Installation Complete ==="
 echo "Please reboot your system to boot into NixOS."
