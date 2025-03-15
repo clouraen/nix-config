@@ -41,30 +41,46 @@ select_disk() {
     export DISK="$selected_disk"
 }
 
-# Seleção de configuração de host
+# Host configuration selection function
 select_host() {
-    echo "=== Host Configuration ==="
-    echo "Select host configuration:"
-    
-    # Lista de configurações disponíveis no repositório
-    # Estas precisam corresponder exatamente aos nomes no flake.nix
-    declare -a hosts=("desktop" "thinkpad-t440p" "macbook-m1")
-    
-    for i in "${!hosts[@]}"; do
-        echo "[$i] ${hosts[$i]}"
-    done
-    
-    read -rp "Enter selection (0-2): " selection
-    
-    # Verificar se a seleção é válida
-    if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -lt "${#hosts[@]}" ]; then
-        export HOST_CONFIG="${hosts[$selection]}"
-        echo "Selected host: $HOST_CONFIG"
+  echo ""
+  echo "=== Host Configuration Selection ==="
+  echo ""
+
+  # Find available host configurations
+  HOSTS_DIR="$(dirname "$0")/../hosts"
+  mapfile -t HOSTS < <(find "$HOSTS_DIR" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | sort)
+
+  if [ ${#HOSTS[@]} -eq 0 ]; then
+    echo "Error: No host configurations found in $HOSTS_DIR"
+    exit 1
+  fi
+
+  # Display menu
+  echo "Available host configurations:"
+  echo "-----------------------------"
+  for i in "${!HOSTS[@]}"; do
+    echo "[$((i+1))] ${HOSTS[$i]}"
+  done
+  echo "-----------------------------"
+
+  # Get user selection
+  local selection
+  while true; do
+    read -rp "Select host configuration [1-${#HOSTS[@]}]: " selection
+    if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -ge 1 ] && [ "$selection" -le "${#HOSTS[@]}" ]; then
+      SELECTED_HOST="${HOSTS[$((selection-1))]}"
+      break
     else
-        echo "Invalid selection. Defaulting to desktop."
-        export HOST_CONFIG="desktop"
-        echo "Selected host: $HOST_CONFIG"
+      echo "Invalid selection. Please try again."
     fi
+  done
+
+  echo "Selected host: $SELECTED_HOST"
+  
+  # Create hostname file
+  echo "$SELECTED_HOST" > "$(dirname "$0")/../hostname"
+  echo "Host configuration set to $SELECTED_HOST"
 }
 
 # Aplicar configuração NixOS

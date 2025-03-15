@@ -1,0 +1,9 @@
+# ...existing code...
+
+echo "Step 2: Selecting disk configuration"
+./scripts/select-disk.sh
+# ...existing code...
+
+echo "Step 3: Selecting host configuration"
+./scripts/select-host.sh
+# ...existing code...

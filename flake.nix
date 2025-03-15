@@ -19,6 +19,8 @@
       lib = nixpkgs.lib;
       systems = [ "x86_64-linux" "aarch64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
+      # Read the hostname file to determine the current host
+      hostname = builtins.readFile ./hostname;
     in
     {
       # System configurations
@@ -70,6 +72,12 @@
             sops-nix.nixosModules.sops
             (import ./secrets.nix)
           ];
+          specialArgs = { inherit inputs; };
+        };
+
+        "${hostname}" = nixpkgs.lib.nixosSystem {
+          # Import the specific host configuration
+          modules = [ ./hosts/${hostname} ];
           specialArgs = { inherit inputs; };
         };
       };
