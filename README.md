@@ -4,14 +4,48 @@ This repository contains NixOS configurations for various machines using the Nix
 
 ## Quick Start
 
-To install NixOS using this configuration, boot into a NixOS live environment and run:
+To install NixOS using this configuration, boot into a NixOS live environment.
+
+### Interactive Installation
+
+For an interactive installation with guided prompts:
 
 ```bash
-# Simple one-liner with sudo
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/clouraen/nix-config/master/bootstrap.sh)"
+# Run the bootstrap script in interactive mode
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/clouraen/nix-config/master/bootstrap.sh)" -- --interactive
 ```
 
-Or if you prefer step by step:
+### Non-Interactive Installation
+
+For a direct installation with all parameters specified:
+
+```bash
+# Bootstrap with required parameters
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/clouraen/nix-config/master/bootstrap.sh)" -- \
+  -d /dev/sdX \
+  -h [host] \
+  -s [swap-size] \
+  -u [username] \
+  -f "[full name]" \
+  -n [hostname]
+```
+
+For example:
+
+```bash
+# Example with specific values
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/clouraen/nix-config/master/bootstrap.sh)" -- \
+  -d /dev/sda \
+  -h desktop \
+  -s 8 \
+  -u john \
+  -f "John Doe" \
+  -n my-nixos
+```
+
+### Manual Method
+
+If you prefer a step by step approach:
 
 ```bash
 # Download the bootstrap script
@@ -20,13 +54,27 @@ curl -LO https://raw.githubusercontent.com/clouraen/nix-config/master/bootstrap.
 # Make it executable
 chmod +x bootstrap.sh
 
-# Run the bootstrap script
-sudo ./bootstrap.sh
+# Run interactively
+sudo ./bootstrap.sh --interactive
+
+# OR run with all parameters specified
+sudo ./bootstrap.sh -d /dev/sdX -h [host] -s [swap-size] -u [username] -f "[full name]" -n [hostname]
 ```
+
+## Required Parameters
+
+The installation script requires the following parameters (unless using --interactive mode):
+
+- `-d <disk>`: Target disk for installation (e.g., /dev/sda)
+- `-h <host>`: Host configuration to use (see Supported Host Configurations below)
+- `-s <swap-size>`: Swap partition size in GB (optional, default is 8)
+- `-u <username>`: Username for your account
+- `-f "<fullname>"`: Your full name (in quotes)
+- `-n <hostname>`: Hostname for your machine
 
 ## Installation Process
 
-The bootstrap script guides you through an interactive installation process:
+The interactive bootstrap script guides you through:
 
 1. **Select target device** - Choose the disk where NixOS will be installed
 2. **Select host configuration** - Choose from pre-defined host configurations
