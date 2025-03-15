@@ -31,7 +31,9 @@ The bootstrap script guides you through an interactive installation process:
 1. **Select target device** - Choose the disk where NixOS will be installed
 2. **Select host configuration** - Choose from pre-defined host configurations
 3. **Set swap size** - Specify the swap partition size (default is 8GB)
-4. **Confirm and install** - Review settings before proceeding with installation
+4. **Configure user account** - Set username and full name for your account
+5. **Set hostname** - Define the hostname for your machine
+6. **Confirm and install** - Review settings before proceeding with installation
 
 ## Supported Host Configurations
 
@@ -54,7 +56,13 @@ git clone https://github.com/clouraen/nix-config.git
 cd nix-config
 
 # Run the installation with custom parameters
-nix --experimental-features "nix-command flakes" run .#install -- -d /dev/sdX -h [host] -s [swap-size]
+nix --experimental-features "nix-command flakes" run .#install -- \
+  -d /dev/sdX \
+  -h [host] \
+  -s [swap-size] \
+  -u [username] \
+  -f "[full name]" \
+  -n [hostname]
 ```
 
 ## Post-Installation

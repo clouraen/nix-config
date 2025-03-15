@@ -1,73 +1,65 @@
 {
-  description = "NixOS configuration";
+  description = "NixOS Configuration";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
-    hyprland.url = "github:hyprwm/Hyprland";
-    end4-dots = {
-      url = "github:end-4/dots-hyprland";
-      flake = false;
-    };
+    nixos-hardware.url = "github:NixOS/nixos-hardware";
   };
 
-  outputs = { self, nixpkgs, nixos-hardware, hyprland, home-manager, ... }@inputs: {
-    nixosConfigurations = {
-      desktop = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        modules = [ 
-          ./modules/partitioning
-          ./hosts/desktop/configuration.nix
-          ./common/default.nix 
-          hyprland.nixosModules.default
-          home-manager.nixosModules.home-manager
-        ];
-      };
-      thinkpad-t440p = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        modules = [ 
-          ./modules/partitioning
-          nixos-hardware.nixosModules.lenovo-thinkpad-t440p
-          ./hosts/thinkpad-t440p/configuration.nix
-          ./common/default.nix
-          hyprland.nixosModules.default
-          home-manager.nixosModules.home-manager
-        ];
-      };
-      macbook-m1 = nixpkgs.lib.nixosSystem {
-        system = "aarch64-linux";
-        modules = [ 
-          ./modules/partitioning
-          nixos-hardware.nixosModules.apple-macbook-pro-14-m1
-          ./hosts/macbook-m1/configuration.nix
-          ./common/default.nix
-          hyprland.nixosModules.default
-          home-manager.nixosModules.home-manager
-        ];
-      };
-    };
+  outputs = { self, nixpkgs, home-manager, nixos-hardware, ... }@inputs:
+    let
+      lib = nixpkgs.lib;
+      systems = [ "x86_64-linux" "aarch64-linux" ];
+      forAllSystems = nixpkgs.lib.genAttrs systems;
+    in
+    {
+      # System configurations
+      nixosConfigurations = {
+        # Desktop configuration
+        desktop = lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [
+            ./hosts/desktop
+            home-manager.nixosModules.home-manager
+          ];
+          specialArgs = { inherit inputs; };
+        };
 
-    apps = {
-      x86_64-linux = {
-        install = {
-          type = "app";
-          program = "${pkgs.writeShellScriptBin "nix-install" ''
-            ${builtins.readFile ./scripts/install.sh}
-          ''}/bin/nix-install";
+        # ThinkPad T440p configuration
+        thinkpad-t440p = lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [
+            ./hosts/thinkpad-t440p
+            nixos-hardware.nixosModules.lenovo-thinkpad-t440p
+            home-manager.nixosModules.home-manager
+          ];
+          specialArgs = { inherit inputs; };
+        };
+
+        # MacBook M1 configuration
+        macbook-m1 = lib.nixosSystem {
+          system = "aarch64-linux";
+          modules = [
+            ./hosts/macbook-m1
+            nixos-hardware.nixosModules.apple-m1
+            home-manager.nixosModules.home-manager
+          ];
+          specialArgs = { inherit inputs; };
         };
       };
-      aarch64-linux = {
-        install = {
-          type = "app";
-          program = "${pkgs.writeShellScriptBin "nix-install" ''
-            ${builtins.readFile ./scripts/install.sh}
-          ''}/bin/nix-install";
-        };
-      };
+
+      # Installation package
+      packages = forAllSystems (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          install = pkgs.writeShellScriptBin "install" (builtins.readFile ./scripts/install.sh);
+        }
+      );
     };
-  };
 }

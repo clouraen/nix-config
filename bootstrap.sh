@@ -1,111 +1,85 @@
 #!/usr/bin/env bash
-
-# Bootstrap script for NixOS configuration
-# This script automates the installation process by downloading the configuration
-# repository and running the installation script with the provided parameters.
-
 set -euo pipefail
 
-# Default values
-DEVICE=""
-HOST=""
-SWAP_SIZE="8G"
-REPO_URL="https://github.com/clouraen/nix-config.git"
-REPO_DIR="nix-config"
+echo "=== NixOS Configuration Bootstrap ==="
+echo "This script will guide you through the NixOS installation process."
 
-# Check if running from NixOS installer
-if [ ! -f /etc/NIXOS ]; then
-  echo "Warning: This script should be run from the NixOS installer environment."
-  read -p "Continue anyway? (y/N) " confirm
-  if [[ ! "$confirm" =~ ^[yY]$ ]]; then
-    exit 1
-  fi
+# Check if running as root
+if [ "$EUID" -ne 0 ]; then
+  echo "Please run as root"
+  exit 1
 fi
 
-# Function to list available devices
-list_devices() {
-  echo "Available devices:"
-  lsblk -p -o NAME,SIZE,TYPE,MOUNTPOINTS | grep disk
-  echo ""
-}
-
-# Function to prompt for device
-prompt_device() {
-  list_devices
-  while [ -z "$DEVICE" ]; do
-    read -p "Enter the target device for installation (e.g., /dev/sda): " input_device
-    if [ -b "$input_device" ]; then
-      DEVICE=$input_device
-    else
-      echo "Invalid device. Please select a valid block device."
-      list_devices
-    fi
+# Function to select from options
+select_option() {
+  local options=("$@")
+  local i=1
+  for opt in "${options[@]}"; do
+    echo "$i) $opt"
+    ((i++))
   done
-}
-
-# Function to prompt for host
-prompt_host() {
-  echo "Supported hosts:"
-  echo "1) desktop (i7 3370 + GTX 4060)"
-  echo "2) thinkpad-t440p"
-  echo "3) macbook-m1"
-  echo ""
   
-  while [ -z "$HOST" ]; do
-    read -p "Select host configuration [1-3]: " host_selection
-    case $host_selection in
-      1) HOST="desktop" ;;
-      2) HOST="thinkpad-t440p" ;;
-      3) HOST="macbook-m1" ;;
-      *) echo "Invalid selection. Please choose a number between 1 and 3." ;;
-    esac
-  done
+  local selection
+  read -p "Enter selection: " selection
+  echo "${options[$((selection-1))]}"
 }
 
-# Function to prompt for swap size
-prompt_swap_size() {
-  read -p "Enter swap size (default: 8G): " input_swap
-  if [ -n "$input_swap" ]; then
-    SWAP_SIZE=$input_swap
-  fi
-}
+# Temporary directory for the repository
+TEMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
-# Welcome message
-echo "====== NixOS Installation Bootstrap ======"
-echo "This interactive script will guide you through the NixOS installation process."
-echo "========================================"
+echo "=== Cloning configuration repository ==="
+git clone https://github.com/clouraen/nix-config.git "$TEMP_DIR"
+cd "$TEMP_DIR"
 
-# Collect installation parameters
-prompt_device
-prompt_host
-prompt_swap_size
+echo "=== Disk Selection ==="
+# Get available disks
+mapfile -t DISKS < <(lsblk -dpno NAME,SIZE | grep -v loop | awk '{print $1 " (" $2 ")"}')
+if [ ${#DISKS[@]} -eq 0 ]; then
+  echo "No disks found. Exiting."
+  exit 1
+fi
 
-# Confirm installation parameters
-echo ""
-echo "Installation Parameters:"
-echo "Device: $DEVICE"
-echo "Host: $HOST"
-echo "Swap Size: $SWAP_SIZE"
-echo ""
+echo "Available disks:"
+TARGET_DISK=$(select_option "${DISKS[@]}" | cut -d' ' -f1)
 
-read -p "Proceed with installation? (y/N) " confirm
-if [[ ! "$confirm" =~ ^[yY]$ ]]; then
+echo "=== Host Configuration ==="
+echo "Select host configuration:"
+HOST_CONFIG=$(select_option "desktop" "thinkpad-t440p" "macbook-m1")
+
+echo "=== Swap Size ==="
+read -p "Enter swap size in GB (default: 8): " SWAP_SIZE
+SWAP_SIZE=${SWAP_SIZE:-8}
+
+echo "=== User Configuration ==="
+read -p "Enter username: " USERNAME
+read -p "Enter full name: " FULLNAME
+
+echo "=== Hostname ==="
+read -p "Enter hostname: " HOSTNAME
+
+echo "=== Installation Summary ==="
+echo "Target disk: $TARGET_DISK"
+echo "Host configuration: $HOST_CONFIG"
+echo "Swap size: ${SWAP_SIZE}GB"
+echo "Username: $USERNAME"
+echo "Full name: $FULLNAME"
+echo "Hostname: $HOSTNAME"
+
+read -p "Proceed with installation? (y/N): " CONFIRM
+if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
   echo "Installation cancelled."
   exit 0
 fi
 
-# Create temporary directory and navigate to it
-TEMP_DIR=$(mktemp -d)
-echo "Working in temporary directory: $TEMP_DIR"
-cd "$TEMP_DIR"
+echo "=== Starting NixOS Installation ==="
+nix --experimental-features "nix-command flakes" run .#install -- \
+  -d "$TARGET_DISK" \
+  -h "$HOST_CONFIG" \
+  -s "$SWAP_SIZE" \
+  -u "$USERNAME" \
+  -f "$FULLNAME" \
+  -n "$HOSTNAME"
 
-# Clone the repository
-echo "Cloning the configuration repository..."
-git clone "$REPO_URL" "$REPO_DIR" || { echo "Failed to clone repository"; exit 1; }
-cd "$REPO_DIR"
-
-# Run the installation script
-echo "Running the installation script..."
-nix --experimental-features "nix-command flakes" run .#install -- -d "$DEVICE" -h "$HOST" -s "$SWAP_SIZE"
-
-echo "Installation process completed!"
+echo "=== Installation Complete ==="
+echo "Please reboot your system to boot into NixOS."
