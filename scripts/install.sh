@@ -76,7 +76,7 @@ mount "$ROOT_PART" /mnt
 mkdir -p /mnt/boot/efi
 mount "$EFI_PART" /mnt/boot/efi
 
-echo "=== Generating NixOS Configuration ==="
+echo "=== Setting up NixOS Configuration ==="
 # Hash the password if provided
 if [ -n "$PASSWORD" ]; then
   HASHED_PASSWORD=$(nix-shell -p mkpasswd --run "mkpasswd -m sha-512 '$PASSWORD'")
@@ -84,12 +84,18 @@ else
   HASHED_PASSWORD='!'  # Locked password
 fi
 
-# Generate hardware configuration
-nixos-generate-config --root /mnt
+# Clean up any existing nixos configuration
+rm -rf /mnt/etc/nixos
 
 # Clone repository to the new system
 mkdir -p /mnt/etc/nixos
 git clone https://github.com/clouraen/nix-config.git /mnt/etc/nixos
+
+# Generate hardware configuration and save it
+TEMP_DIR=$(mktemp -d)
+nixos-generate-config --root /mnt --dir "$TEMP_DIR"
+mv "$TEMP_DIR/hardware-configuration.nix" /mnt/etc/nixos/
+rm -rf "$TEMP_DIR"
 
 # Create host-specific configuration
 mkdir -p "/mnt/etc/nixos/hosts/$HOSTNAME"
@@ -115,8 +121,8 @@ cat > "/mnt/etc/nixos/hosts/$HOSTNAME/default.nix" <<EOF
 }
 EOF
 
-# Copy the generated hardware configuration
-cp /mnt/etc/nixos/hardware-configuration.nix "/mnt/etc/nixos/hosts/$HOSTNAME/"
+# Move the generated hardware configuration to host directory
+mv /mnt/etc/nixos/hardware-configuration.nix "/mnt/etc/nixos/hosts/$HOSTNAME/"
 
 echo "=== Installing NixOS ==="
 # Install NixOS
