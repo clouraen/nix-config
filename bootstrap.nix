@@ -15,7 +15,7 @@
     # Outros serviços essenciais
   };
 
-  # Scripts de ativação do sistema
+  # Garantir que a variável de host está configurada
   system.activationScripts = {
     bootstrap-setup = {
       text = ''
@@ -23,8 +23,14 @@
         mkdir -p /etc/nixos/secrets
         chmod 750 /etc/nixos/secrets
         
-        # Setup inicial de usuários e grupos
-        # (executado apenas na primeira instalação)
+        # Setup inicial específico para o host
+        echo "Configurando host: ${config.networking.hostName}"
+        
+        # Marca a conclusão do bootstrap
+        if [ ! -f /etc/.bootstrap-done ]; then
+          touch /etc/.bootstrap-done
+          echo "Bootstrap inicial concluído em $(date)" > /etc/.bootstrap-done
+        fi
       '';
       deps = [];
     };

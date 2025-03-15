@@ -26,6 +26,8 @@
           modules = [
             ./hosts/desktop
             home-manager.nixosModules.home-manager
+            sops-nix.nixosModules.sops
+            ./bootstrap.nix
           ];
           specialArgs = { inherit inputs; };
         };
@@ -37,6 +39,8 @@
             ./hosts/thinkpad-t440p
             nixos-hardware.nixosModules.lenovo-thinkpad-t440p
             home-manager.nixosModules.home-manager
+            sops-nix.nixosModules.sops
+            ./bootstrap.nix
           ];
           specialArgs = { inherit inputs; };
         };
@@ -48,6 +52,8 @@
             ./hosts/macbook-m1
             nixos-hardware.nixosModules.apple-m1
             home-manager.nixosModules.home-manager
+            sops-nix.nixosModules.sops
+            ./bootstrap.nix
           ];
           specialArgs = { inherit inputs; };
         };

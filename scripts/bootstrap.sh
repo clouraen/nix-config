@@ -46,27 +46,25 @@ select_host() {
     echo "=== Host Configuration ==="
     echo "Select host configuration:"
     
-    # Lista de configurações disponíveis
-    hosts=("desktop" "thinkpad-t440p" "macbook-m1")
+    # Lista de configurações disponíveis no repositório
+    # Estas precisam corresponder exatamente aos nomes no flake.nix
+    declare -a hosts=("desktop" "thinkpad-t440p" "macbook-m1")
     
     for i in "${!hosts[@]}"; do
         echo "[$i] ${hosts[$i]}"
     done
     
-    read -rp "Enter selection: " selection
+    read -rp "Enter selection (0-2): " selection
     
     # Verificar se a seleção é válida
     if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -lt "${#hosts[@]}" ]; then
-        selected_host="${hosts[$selection]}"
+        export HOST_CONFIG="${hosts[$selection]}"
+        echo "Selected host: $HOST_CONFIG"
     else
         echo "Invalid selection. Defaulting to desktop."
-        selected_host="desktop"
+        export HOST_CONFIG="desktop"
+        echo "Selected host: $HOST_CONFIG"
     fi
-    
-    echo "Selected host: $selected_host"
-    
-    # Exportar a variável de host selecionada
-    export HOST_CONFIG="$selected_host"
 }
 
 # Aplicar configuração NixOS
@@ -82,7 +80,8 @@ apply_config() {
         chmod 600 /path/to/keys.txt
     fi
     
-    # Aplicar a configuração
+    # Aplicar a configuração usando o nome exato do host no flake.nix
+    echo "Executing: nixos-rebuild switch --flake $CONFIG_DIR#$HOST_CONFIG"
     nixos-rebuild switch --flake "$CONFIG_DIR#$HOST_CONFIG"
 }
 
