@@ -4,10 +4,15 @@ set -euo pipefail
 echo "=== NixOS Configuration Bootstrap ==="
 echo "This script will guide you through the NixOS installation process."
 
-# Configuration directory
-CONFIG_DIR="/home/cleiton-moura/Downloads/nix-config"
-# Hosts directory
-HOSTS_DIR="$CONFIG_DIR/hosts"
+# Create and set up temporary configuration directory
+setup_config_dir() {
+    CONFIG_DIR=$(mktemp -d)
+    HOSTS_DIR="$CONFIG_DIR/hosts"
+    trap 'rm -rf "$CONFIG_DIR"' EXIT
+}
+
+# Call setup_config_dir before using CONFIG_DIR
+setup_config_dir
 
 # Function to install required tools
 install_tools() {
@@ -96,8 +101,30 @@ detect_hardware() {
     echo "$detected_host"
 }
 
+# Function to validate host configuration
+validate_host() {
+    local host="$1"
+    local valid_hosts
+    mapfile -t valid_hosts < <(find "$HOSTS_DIR" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | sort)
+    
+    for valid_host in "${valid_hosts[@]}"; do
+        if [ "$host" = "$valid_host" ]; then
+            return 0
+        fi
+    done
+    echo "Error: Invalid host configuration '$host'. Valid hosts: ${valid_hosts[*]}"
+    exit 1
+}
+
 # Function to select host configuration
 select_host() {
+    # If host is provided via command line, validate and use it
+    if [ -n "$SELECTED_HOST" ]; then
+        validate_host "$SELECTED_HOST"
+        echo "$SELECTED_HOST" > "$CONFIG_DIR/hostname"
+        return
+    fi
+    
     echo "=== Host Configuration ==="
     
     # Get list of host configurations
@@ -179,13 +206,15 @@ usage() {
     exit 1
 }
 
-while getopts "d:s:u:f:n:p:" opt; do
+while getopts "d:h:s:u:f:n:p:" opt; do
     case ${opt} in
-        d) DISK="$OPTARG"; INTERACTIVE=false ;;
+        d) DISK="$OPTARG" ;;
+        h) SELECTED_HOST="$OPTARG" ;;
         s) SWAP_SIZE="$OPTARG" ;;
         u) USERNAME="$OPTARG" ;;
         f) FULLNAME="$OPTARG" ;;
         n) HOSTNAME="$OPTARG" ;;
+        p) PASSWORD="$OPTARG" ;;
         \?) usage ;;
     esac
 done
@@ -226,6 +255,34 @@ select_disk() {
     echo "Selected disk: $DISK"
 }
 
+
+# Validate all required settings before proceeding
+validate_settings() {
+    if [ -z "$DISK" ]; then
+        echo "Error: Disk (-d) is required"
+        exit 1
+    fi
+    if [ ! -b "$DISK" ]; then
+        echo "Error: Invalid disk device: $DISK"
+        exit 1
+    fi
+    if [ -z "$USERNAME" ]; then
+        echo "Error: Username (-u) is required"
+        exit 1
+    fi
+    if [ -z "$FULLNAME" ]; then
+        echo "Error: Full name (-f) is required"
+        exit 1
+    fi
+    if [ -z "$HOSTNAME" ]; then
+        echo "Error: Hostname (-n) is required"
+        exit 1
+    fi
+    if [ -z "$SELECTED_HOST" ]; then
+        echo "Error: Host (-h) is required"
+        exit 1
+    fi
+}
 
 # Configure user settings
 configure_user() {
@@ -324,10 +381,28 @@ show_summary() {
 }
 
 # Execute the script
+setup_config_dir
 setup_repo
 install_tools
+
+# Check if we're in non-interactive mode
+if [ -n "$DISK" ] && [ -n "$USERNAME" ] && [ -n "$FULLNAME" ] && [ -n "$HOSTNAME" ]; then
+    INTERACTIVE=false
+fi
+
+# Validate settings after repo is available
+if [ "$INTERACTIVE" = false ]; then
+    if [ -z "$SELECTED_HOST" ]; then
+        echo "Error: Host (-h) is required in non-interactive mode"
+        exit 1
+    fi
+    validate_host "$SELECTED_HOST"
+    validate_settings
+fi
+
+# Proceed with installation
 select_disk
-select_host
+[ "$INTERACTIVE" = true ] && select_host
 configure_user
 show_summary
 apply_config
