@@ -19,19 +19,42 @@ while getopts "d:h:s:u:f:n:p:" opt; do
     f) FULLNAME="$OPTARG" ;;
     n) HOSTNAME="$OPTARG" ;;
     p) PASSWORD="$OPTARG" ;;
-    *) echo "Usage: $0 -d <disk> -h <host> [-s <swap-size>] -u <username> -f \"<fullname>\" -n <hostname> [-p <password>]" && exit 1 ;;
+    *) echo "Usage: $0 -d <disk> [-h <host>] [-s <swap-size>] -u <username> -f \"<fullname>\" -n <hostname> [-p <password>]" && exit 1 ;;
   esac
 done
 
 # Validate required parameters
-if [ -z "$DISK" ] || [ -z "$HOST" ] || [ -z "$USERNAME" ] || [ -z "$FULLNAME" ] || [ -z "$HOSTNAME" ]; then
+if [ -z "$DISK" ] || [ -z "$USERNAME" ] || [ -z "$FULLNAME" ] || [ -z "$HOSTNAME" ]; then
   echo "Missing required parameters. Usage:"
-  echo "$0 -d <disk> -h <host> [-s <swap-size>] -u <username> -f \"<fullname>\" -n <hostname> [-p <password>]"
+  echo "$0 -d <disk> [-h <host>] [-s <swap-size>] -u <username> -f \"<fullname>\" -n <hostname> [-p <password>]"
   exit 1
 fi
 
-# Validate host configuration
-if [[ ! "$HOST" =~ ^(desktop|thinkpad-t440p|macbook-m1)$ ]]; then
+# Function to select host configuration
+select_host() {
+  local hosts=(desktop thinkpad-t440p macbook-m1)
+  echo "=== Host Configuration ==="
+  for i in "${!hosts[@]}"; do
+    echo "[$i] ${hosts[$i]}"
+  done
+  
+  local selection
+  while true; do
+    read -rp "Enter selection: " selection
+    if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -lt "${#hosts[@]}" ]; then
+      HOST="${hosts[$selection]}"
+      break
+    fi
+    echo "Invalid selection. Please try again."
+  done
+  echo "Selected host: $HOST"
+}
+
+# If host is not provided, run interactive selection
+if [ -z "$HOST" ]; then
+  select_host
+# Validate host configuration if provided
+elif [[ ! "$HOST" =~ ^(desktop|thinkpad-t440p|macbook-m1)$ ]]; then
   echo "Invalid host configuration. Supported hosts: desktop, thinkpad-t440p, macbook-m1"
   exit 1
 fi
