@@ -1,104 +1,78 @@
 # NixOS Configuration
 
-Customized NixOS system with support for multiple hosts and automated installation.
+This repository contains NixOS configurations for various machines using the Nix Flakes system.
 
-## Supported Hosts
+## Quick Start
 
-- Desktop (i7 3370 + GTX 4060)
-- ThinkPad T440p
-- MacBook M1
-
-## One-line Installation
-
-Run this command directly in the NixOS installer to start the interactive installation:
+To install NixOS using this configuration, boot into a NixOS live environment and run:
 
 ```bash
-# Interactive installation with assistant:
-curl -sL https://raw.githubusercontent.com/clouraen/nix-config/refs/heads/master/bootstrap.sh | bash
-
-# The script will:
-# 1. List available devices for you to choose
-# 2. Present host options (desktop, thinkpad-t440p, macbook-m1)
-# 3. Allow you to set the swap size
-# 4. Confirm your choices before proceeding
+# Simple one-liner with sudo
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/clouraen/nix-config/master/bootstrap.sh)"
 ```
+
+Or if you prefer step by step:
+
+```bash
+# Download the bootstrap script
+curl -LO https://raw.githubusercontent.com/clouraen/nix-config/master/bootstrap.sh
+
+# Make it executable
+chmod +x bootstrap.sh
+
+# Run the bootstrap script
+sudo ./bootstrap.sh
+```
+
+## Installation Process
+
+The bootstrap script guides you through an interactive installation process:
+
+1. **Select target device** - Choose the disk where NixOS will be installed
+2. **Select host configuration** - Choose from pre-defined host configurations
+3. **Set swap size** - Specify the swap partition size (default is 8GB)
+4. **Confirm and install** - Review settings before proceeding with installation
+
+## Supported Host Configurations
+
+Currently, this configuration supports:
+
+- **desktop** - Desktop PC with i7 3370 + GTX 4060
+- **thinkpad-t440p** - Lenovo ThinkPad T440p laptop
+- **macbook-m1** - Apple MacBook with M1 processor
 
 ## Manual Installation
 
-1. Download the NixOS installer
-2. Boot into the installer
-3. Clone this repository:
+If you prefer to install manually:
+
+1. Clone this repository
+2. Run the install script directly:
+
 ```bash
+# Clone the repository
 git clone https://github.com/clouraen/nix-config.git
 cd nix-config
+
+# Run the installation with custom parameters
+nix --experimental-features "nix-command flakes" run .#install -- -d /dev/sdX -h [host] -s [swap-size]
 ```
 
-4. Run the installation script:
-```bash
-# For Desktop:
-nix run .#install -- -d /dev/sda -h desktop -s 16G
+## Post-Installation
 
-# For ThinkPad T440p:
-nix run .#install -- -d /dev/nvme0n1 -h thinkpad-t440p -s 8G
+After installation, the system will be set up according to the selected host configuration. You may need to:
 
-# For MacBook M1 (requires manual partitioning):
-# First do the manual partitioning and then:
-nix run .#install -- -d /dev/nvme0n1 -h macbook-m1 -s 8G
-```
+1. Set a password for your user
+2. Configure WiFi (if applicable)
+3. Update the system with `sudo nixos-rebuild switch --flake .`
 
-## Configurations
+## Customization
 
-### Default User
-- Username: huggyturd
-- Initial password: nixos
-- Passwordless sudo enabled
+To customize your configuration:
 
-### Desktop Environment
-- Hyprland (Wayland)
-- Configuration based on end-4/dots-hyprland
+1. Fork this repository
+2. Modify the files in the `hosts/` and `modules/` directories
+3. Add your changes to the flake.nix file
 
-### Common Packages
-- Google Chrome
-- Vim
-- Git
-- Terminal: kitty
-- Bar: waybar
-- Notifications: dunst
-- Menu: wofi/rofi
+## License
 
-### Host-Specific
-
-#### Desktop
-- Optimized NVIDIA drivers
-- OpenGL/Vulkan support
-- Intel CPU performance
-
-#### ThinkPad T440p
-- TLP for battery management
-- ThinkFan
-- Configured trackpoint
-
-#### MacBook M1
-- Optimized Asahi Linux
-- Specific firmware
-- Power management
-
-## Maintenance
-
-To update the system:
-```bash
-sudo nixos-rebuild switch
-```
-
-To update with changes in the flake:
-```bash
-sudo nixos-rebuild switch --flake .#hostname
-```
-
-## Project Structure
-````
-.
-├── common/           # Shared configurations
-├── hosts/           # Host-specific configurations
-├── modules/         # Custom modules
-└── scripts/         # Installation scripts
+This project is licensed under the MIT License - see the LICENSE file for details.
