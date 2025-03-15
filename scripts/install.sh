@@ -1,35 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DISK=""
-HOST=""
-SWAP_SIZE="8"
-USERNAME=""
-FULLNAME=""
-HOSTNAME=""
-PASSWORD=""
-
-# Parse arguments
-while getopts "d:h:s:u:f:n:p:" opt; do
-  case $opt in
-    d) DISK="$OPTARG" ;;
-    h) HOST="$OPTARG" ;;
-    s) SWAP_SIZE="$OPTARG" ;;
-    u) USERNAME="$OPTARG" ;;
-    f) FULLNAME="$OPTARG" ;;
-    n) HOSTNAME="$OPTARG" ;;
-    p) PASSWORD="$OPTARG" ;;
-    *) echo "Usage: $0 -d <disk> [-h <host>] [-s <swap-size>] -u <username> -f \"<fullname>\" -n <hostname> [-p <password>]" && exit 1 ;;
-  esac
-done
-
-# Validate required parameters
-if [ -z "$DISK" ] || [ -z "$USERNAME" ] || [ -z "$FULLNAME" ] || [ -z "$HOSTNAME" ]; then
-  echo "Missing required parameters. Usage:"
-  echo "$0 -d <disk> [-h <host>] [-s <swap-size>] -u <username> -f \"<fullname>\" -n <hostname> [-p <password>]"
-  exit 1
-fi
-
 # Function to select host configuration
 select_host() {
   local hosts=(desktop thinkpad-t440p macbook-m1)
@@ -42,22 +13,79 @@ select_host() {
   while true; do
     read -rp "Enter selection: " selection
     if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -lt "${#hosts[@]}" ]; then
-      HOST="${hosts[$selection]}"
+      echo "Selected host: ${hosts[$selection]}"
+      echo
+      echo "=== Host Selected ==="
+      echo "Host: ${hosts[$selection]}"
+      echo
+      return "$selection"
+    fi
+    echo "Invalid selection. Please try again."
+  done
+}
+
+# Function to select disk
+select_disk() {
+  echo "=== Disk Selection ==="
+  local i=0
+  local disks=()
+  
+  while read -r disk size name; do
+    disks+=("$disk")
+    echo "[$i] $disk   ${size}B $name"
+    ((i++))
+  done < <(lsblk -dpno NAME,SIZE,MODEL | grep -E '^/dev/(sd|nvme|vd)')
+  
+  local selection
+  while true; do
+    read -rp "Enter selection: " selection
+    if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -lt "${#disks[@]}" ]; then
+      echo "Selected disk: ${disks[$selection]}"
+      echo
+      echo "=== Disk Selected ==="
+      echo "Disk: ${disks[$selection]}"
+      echo
+      DISK="${disks[$selection]}"
       break
     fi
     echo "Invalid selection. Please try again."
   done
-  echo "Selected host: $HOST"
 }
 
-# If host is not provided, run interactive selection
-if [ -z "$HOST" ]; then
-  select_host
-# Validate host configuration if provided
-elif [[ ! "$HOST" =~ ^(desktop|thinkpad-t440p|macbook-m1)$ ]]; then
-  echo "Invalid host configuration. Supported hosts: desktop, thinkpad-t440p, macbook-m1"
+# Initialize variables
+DISK=""
+HOST=""
+SWAP_SIZE="8"
+USERNAME=""
+FULLNAME=""
+HOSTNAME=""
+PASSWORD=""
+
+# Get selections first
+host_index=$(select_host)
+HOST=$(echo -e "desktop\nthinkpad-t440p\nmacbook-m1" | sed -n "$((host_index+1))p")
+select_disk
+
+# Parse remaining arguments
+while getopts "s:u:f:n:p:" opt; do
+  case $opt in
+    s) SWAP_SIZE="$OPTARG" ;;
+    u) USERNAME="$OPTARG" ;;
+    f) FULLNAME="$OPTARG" ;;
+    n) HOSTNAME="$OPTARG" ;;
+    p) PASSWORD="$OPTARG" ;;
+    *) echo "Usage: $0 [-s <swap-size>] -u <username> -f \"<fullname>\" -n <hostname> [-p <password>]" && exit 1 ;;
+  esac
+done
+
+# Validate required parameters
+if [ -z "$USERNAME" ] || [ -z "$FULLNAME" ] || [ -z "$HOSTNAME" ]; then
+  echo "Missing required parameters. Usage:"
+  echo "$0 [-s <swap-size>] -u <username> -f \"<fullname>\" -n <hostname> [-p <password>]"
   exit 1
 fi
+
+echo
 
 # Make sure disk exists
 if [ ! -b "$DISK" ]; then

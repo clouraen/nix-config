@@ -6,28 +6,17 @@ This repository contains NixOS configurations for various machines using the Nix
 
 To install NixOS using this configuration, boot into a NixOS live environment.
 
-### Interactive Installation
+### Installation
 
-For an interactive installation with guided prompts:
-
-```bash
-# Run the bootstrap script in interactive mode
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/clouraen/nix-config/master/bootstrap.sh)" -- --interactive
-```
-
-### Non-Interactive Installation
-
-For a direct installation with all parameters specified:
+To install NixOS using this configuration:
 
 ```bash
-# Bootstrap with required parameters
+# Download and run the bootstrap script
 sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/clouraen/nix-config/master/bootstrap.sh)" -- \
-  -d /dev/sdX \
-  -h [host] \
-  -s [swap-size] \
   -u [username] \
   -f "[full name]" \
-  -n [hostname]
+  -n [hostname] \
+  [-s swap-size]
 ```
 
 For example:
@@ -35,17 +24,15 @@ For example:
 ```bash
 # Example with specific values
 sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/clouraen/nix-config/master/bootstrap.sh)" -- \
-  -d /dev/sda \
-  -h desktop \
-  -s 8 \
   -u john \
   -f "John Doe" \
-  -n my-nixos
+  -n my-nixos \
+  -s 8
 ```
 
 ### Manual Method
 
-If you prefer a step by step approach:
+If you prefer to download the script first:
 
 ```bash
 # Download the bootstrap script
@@ -54,34 +41,45 @@ curl -LO https://raw.githubusercontent.com/clouraen/nix-config/master/bootstrap.
 # Make it executable
 chmod +x bootstrap.sh
 
-# Run interactively
-sudo ./bootstrap.sh --interactive
-
-# OR run with all parameters specified
-sudo ./bootstrap.sh -d /dev/sdX -h [host] -s [swap-size] -u [username] -f "[full name]" -n [hostname]
+# Run the script
+sudo ./bootstrap.sh -u [username] -f "[full name]" -n [hostname] [-s swap-size]
 ```
 
 ## Required Parameters
 
-The installation script requires the following parameters (unless using --interactive mode):
+The installation script requires:
 
-- `-d <disk>`: Target disk for installation (e.g., /dev/sda)
-- `-h <host>`: Host configuration to use (see Supported Host Configurations below)
-- `-s <swap-size>`: Swap partition size in GB (optional, default is 8)
 - `-u <username>`: Username for your account
 - `-f "<fullname>"`: Your full name (in quotes)
 - `-n <hostname>`: Hostname for your machine
+- `-s <swap-size>`: Swap partition size in GB (optional, default is 8)
+
+Note: Disk and host selection are handled through interactive menus during installation.
 
 ## Installation Process
 
-The interactive bootstrap script guides you through:
+The installation process guides you through:
 
-1. **Select target device** - Choose the disk where NixOS will be installed
-2. **Select host configuration** - Choose from pre-defined host configurations
-3. **Set swap size** - Specify the swap partition size (default is 8GB)
-4. **Configure user account** - Set username and full name for your account
-5. **Set hostname** - Define the hostname for your machine
-6. **Confirm and install** - Review settings before proceeding with installation
+1. **Host Configuration** - Choose from available host configurations:
+   ```
+   === Host Configuration ===
+   [0] desktop
+   [1] thinkpad-t440p
+   [2] macbook-m1
+   ```
+
+2. **Disk Selection** - Select the installation target disk:
+   ```
+   === Disk Selection ===
+   [0] /dev/sda   111.8G KINGSTON SV300S37A120G
+   [1] /dev/sdb    14.5G USB DISK 2.0
+   ```
+
+3. **System Configuration** - The script uses the provided parameters to:
+   - Configure user account (username and full name)
+   - Set system hostname
+   - Create swap partition (with specified or default size)
+   - Install and configure NixOS
 
 ## Supported Host Configurations
 
@@ -93,7 +91,7 @@ Currently, this configuration supports:
 
 ## Manual Installation
 
-If you prefer to install manually:
+To install manually:
 
 1. Clone this repository
 2. Run the install script directly:
@@ -103,14 +101,12 @@ If you prefer to install manually:
 git clone https://github.com/clouraen/nix-config.git
 cd nix-config
 
-# Run the installation with custom parameters
+# Run the installation
 nix --experimental-features "nix-command flakes" run .#install -- \
-  -d /dev/sdX \
-  -h [host] \
-  -s [swap-size] \
   -u [username] \
   -f "[full name]" \
-  -n [hostname]
+  -n [hostname] \
+  [-s swap-size]
 ```
 
 ## Post-Installation
