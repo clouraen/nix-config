@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Iniciando bootstrap do sistema NixOS..."
+echo "=== NixOS Configuration Bootstrap ==="
+echo "This script will guide you through the NixOS installation process."
+
+# Diretório de configuração
+CONFIG_DIR="/home/cleiton-moura/Downloads/nix-config"
 
 # Verificar se está rodando como root
 if [ "$(id -u)" -ne 0 ]; then
@@ -9,19 +13,84 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-# Diretório de configuração
-CONFIG_DIR="/home/cleiton-moura/Downloads/nix-config"
+# Função para clonar o repositório se não existir
+setup_repo() {
+    if [ ! -d "$CONFIG_DIR" ]; then
+        echo "=== Cloning configuration repository ==="
+        git clone https://github.com/clouraen/nix-config "$CONFIG_DIR"
+    fi
+}
 
-# Configurar sops-nix se ainda não estiver configurado
-if [ ! -f "/path/to/keys.txt" ]; then
-    echo "Configurando chaves para sops-nix..."
-    mkdir -p $(dirname "/path/to/keys.txt")
-    nix-shell -p age --run "age-keygen -o /path/to/keys.txt"
-    chmod 600 /path/to/keys.txt
-fi
+# Seleção de disco
+select_disk() {
+    echo "=== Disk Selection ==="
+    echo "Available disks:"
+    
+    # Listar discos disponíveis
+    mapfile -t disks < <(lsblk -dpno NAME,SIZE,MODEL | grep -E '^/dev/(nvme|sd|vd)')
+    
+    for i in "${!disks[@]}"; do
+        echo "[$i] ${disks[$i]}"
+    done
+    
+    read -rp "Enter selection: " selection
+    selected_disk=$(echo "${disks[$selection]}" | awk '{print $1}')
+    echo "Selected disk: $selected_disk"
+    
+    # Exportar variável para uso posterior
+    export DISK="$selected_disk"
+}
+
+# Seleção de configuração de host
+select_host() {
+    echo "=== Host Configuration ==="
+    echo "Select host configuration:"
+    
+    # Lista de configurações disponíveis
+    hosts=("desktop" "thinkpad-t440p" "macbook-m1")
+    
+    for i in "${!hosts[@]}"; do
+        echo "[$i] ${hosts[$i]}"
+    done
+    
+    read -rp "Enter selection: " selection
+    
+    # Verificar se a seleção é válida
+    if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -lt "${#hosts[@]}" ]; then
+        selected_host="${hosts[$selection]}"
+    else
+        echo "Invalid selection. Defaulting to desktop."
+        selected_host="desktop"
+    fi
+    
+    echo "Selected host: $selected_host"
+    
+    # Exportar a variável de host selecionada
+    export HOST_CONFIG="$selected_host"
+}
 
 # Aplicar configuração NixOS
-echo "Aplicando configuração NixOS..."
-nixos-rebuild switch --flake "$CONFIG_DIR#seuhost"
+apply_config() {
+    echo "=== Applying NixOS Configuration ==="
+    echo "Building and switching to configuration for $HOST_CONFIG..."
+    
+    # Configurar sops-nix se ainda não estiver configurado
+    if [ ! -f "/path/to/keys.txt" ]; then
+        echo "Configurando chaves para sops-nix..."
+        mkdir -p $(dirname "/path/to/keys.txt")
+        nix-shell -p age --run "age-keygen -o /path/to/keys.txt"
+        chmod 600 /path/to/keys.txt
+    fi
+    
+    # Aplicar a configuração
+    nixos-rebuild switch --flake "$CONFIG_DIR#$HOST_CONFIG"
+}
 
-echo "Bootstrap concluído com sucesso!"
+# Executar o script
+setup_repo
+select_disk
+select_host
+apply_config
+
+echo "=== Bootstrap completed successfully ==="
+echo "Your NixOS system has been configured as $HOST_CONFIG"

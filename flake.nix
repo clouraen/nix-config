@@ -57,9 +57,9 @@
           system = "x86_64-linux";
           modules = [
             ./configuration.nix
-            ./bootstrap.nix  # Novo módulo de bootstrap
+            ./bootstrap.nix
             sops-nix.nixosModules.sops
-            ./secrets.nix
+            (import ./secrets.nix)
           ];
           specialArgs = { inherit inputs; };
         };
